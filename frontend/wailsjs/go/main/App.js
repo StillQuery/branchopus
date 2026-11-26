@@ -10,12 +10,20 @@ export function ChooseAndScan() {
   return window['go']['main']['App']['ChooseAndScan']();
 }
 
+export function CopyPath(arg1) {
+  return window['go']['main']['App']['CopyPath'](arg1);
+}
+
 export function LoadChildren(arg1) {
   return window['go']['main']['App']['LoadChildren'](arg1);
 }
 
 export function NodePath(arg1, arg2) {
   return window['go']['main']['App']['NodePath'](arg1, arg2);
+}
+
+export function OpenInExplorer(arg1) {
+  return window['go']['main']['App']['OpenInExplorer'](arg1);
 }
 
 export function OpenPath(arg1) {

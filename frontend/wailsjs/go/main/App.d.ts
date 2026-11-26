@@ -6,9 +6,13 @@ export function BrowseFolder(arg1:string):Promise<main.FolderListing>;
 
 export function ChooseAndScan():Promise<main.ScanSummary>;
 
+export function CopyPath(arg1:string):Promise<string>;
+
 export function LoadChildren(arg1:main.ChildrenRequest):Promise<main.ChildrenResult>;
 
 export function NodePath(arg1:number,arg2:number):Promise<Array<main.RenderNode>>;
+
+export function OpenInExplorer(arg1:string):Promise<void>;
 
 export function OpenPath(arg1:string):Promise<void>;
 

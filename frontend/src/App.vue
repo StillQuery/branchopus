@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, nextTick, ref } from 'vue'
 import TreeCanvas, { type TreeNode } from './components/TreeCanvas.vue'
-import { BrowseFolder, LoadChildren, OpenPath, Query, RootNode, Scan } from '../wailsjs/go/main/App'
+import { BrowseFolder, CopyPath, LoadChildren, OpenInExplorer, OpenPath, Query, RootNode, Scan } from '../wailsjs/go/main/App'
 
 interface ExtensionCount { extension: string; count: number }
 interface ScanSummary {
@@ -19,6 +19,7 @@ const selectedExtensions = ref<string[]>([])
 const scanning = ref(false)
 const querying = ref(false)
 const error = ref('')
+const notice = ref('')
 const showTypes = ref(false)
 const pickerOpen = ref(false)
 const pickerLoading = ref(false)
@@ -38,6 +39,7 @@ const treeRevision = ref(0)
 const depthRevision = ref(0)
 let searchTimer = 0
 let requestVersion = 0
+let noticeTimer = 0
 
 const selectedLabel = computed(() => {
   const count = selectedExtensions.value.length
@@ -154,8 +156,13 @@ async function loadMoreFromMenu() {
 }
 
 function showContext(node: TreeNode, x: number, y: number) {
-  const menuHeight = node.kind === 'directory' ? 142 : 92
-  contextMenu.value = { node, x: Math.min(x, window.innerWidth - 210), y: Math.min(y, window.innerHeight - menuHeight) }
+  const actionCount = 3 + (node.kind === 'directory' ? 1 : 0) + (partialDirectories.value.has(node.id) ? 1 : 0)
+  const menuHeight = 48 + actionCount * 35
+  contextMenu.value = {
+    node,
+    x: Math.max(8, Math.min(x, window.innerWidth - 210)),
+    y: Math.max(8, Math.min(y, window.innerHeight - menuHeight - 8)),
+  }
 }
 
 async function onlyBranch() {
@@ -219,6 +226,25 @@ function clearTypes() {
 
 async function openNode(node: TreeNode) {
   try { await OpenPath(node.path) } catch (e) { error.value = String(e) }
+}
+
+async function openNodeInExplorer() {
+  const node = contextMenu.value?.node
+  contextMenu.value = null
+  if (!node) return
+  try { await OpenInExplorer(node.path) } catch (e) { error.value = String(e) }
+}
+
+async function copyNodePath() {
+  const node = contextMenu.value?.node
+  contextMenu.value = null
+  if (!node) return
+  try {
+    await CopyPath(node.path)
+    notice.value = '已复制绝对路径'
+    window.clearTimeout(noticeTimer)
+    noticeTimer = window.setTimeout(() => { notice.value = '' }, 1800)
+  } catch (e) { error.value = String(e) }
 }
 
 function closeTypePanel(event: MouseEvent) {
@@ -338,8 +364,11 @@ nextTick(() => window.addEventListener('click', closeTypePanel))
       </section>
     </div>
     <div v-if="error" class="error-toast" @click="error = ''">{{ error }}</div>
+    <div v-if="notice" class="notice-toast">{{ notice }}</div>
     <div v-if="contextMenu" class="node-context-menu" :style="{ left: contextMenu.x + 'px', top: contextMenu.y + 'px' }" @click.stop>
       <small>{{ contextMenu.node.name }}</small>
+      <button @click="openNodeInExplorer">在文件管理器中打开</button>
+      <button @click="copyNodePath">复制绝对路径</button>
       <button @click="onlyBranch">仅查看该分支</button>
       <button v-if="contextMenu.node.kind === 'directory'" @click="setAsRoot">以此作为根节点</button>
       <button v-if="contextMenu.node.kind === 'directory' && partialDirectories.has(contextMenu.node.id)" @click="loadMoreFromMenu">加载更多子节点</button>
