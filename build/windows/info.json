@@ -1,0 +1,16 @@
+{
+	"fixed": {
+		"file_version": "0.1.0.0"
+	},
+	"info": {
+		"0000": {
+			"ProductVersion": "0.1.0",
+			"CompanyName": "StillQuery",
+			"FileDescription": "Branchopus local folder tree viewer",
+			"LegalCopyright": "Copyright (c) 2026 StillQuery",
+			"ProductName": "Branchopus",
+			"OriginalFilename": "Branchopus.exe",
+			"Comments": "A lightweight local folder tree viewer."
+		}
+	}
+}

@@ -1,0 +1,32 @@
+# Frontend dependencies and generated output
+frontend/node_modules/
+frontend/dist/
+frontend/package.json.md5
+
+# Wails / Go build output
+build/bin/
+dist/
+.release-tmp/
+*.exe
+*.msi
+*.zip
+*.sha256
+coverage.out
+
+# Local icon drafts and QA captures
+build/*.png
+!build/appicon.png
+build/branchview-*
+build/octo-*
+build/embedded-*
+build/branchopus-embedded-*
+docs/assets/*-raw.png
+
+# Editors and operating systems
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+Desktop.ini
+*.log
+*.tmp
