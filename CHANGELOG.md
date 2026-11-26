@@ -2,6 +2,13 @@
 
 All notable changes to Branchopus are documented in this file.
 
+## [0.1.1] - 2026-11-26
+
+### Added
+
+- Context-menu actions to open any node in File Explorer and copy its absolute path.
+- File nodes are selected automatically when their containing directory opens.
+
 ## [0.1.0] - 2026-11-26
 
 ### Added
