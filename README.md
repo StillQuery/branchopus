@@ -1,7 +1,8 @@
 <div align="center">
-  <img src="docs/assets/branchopus-icon.png" width="132" alt="Branchopus icon">
+  <img src="docs/assets/branchopus-icon.png" width="116" alt="Branchopus 图标">
   <h1>Branchopus</h1>
   <p>把本地文件夹展开成一棵真正的分叉树。</p>
+  <p><strong>目录再深，也不用一层层翻。</strong></p>
   <p>
     <a href="https://github.com/StillQuery/branchopus/releases/latest"><strong>下载 Windows 版</strong></a>
     ·
@@ -9,11 +10,31 @@
     ·
     <a href="#本地开发">本地开发</a>
   </p>
+  <p>
+    <img alt="Windows 10/11" src="https://img.shields.io/badge/Windows-10%20%2F%2011-356f63?style=flat-square">
+    <img alt="最新版本" src="https://img.shields.io/github/v/release/StillQuery/branchopus?style=flat-square&color=d77752&label=最新版本">
+    <img alt="MIT 许可证" src="https://img.shields.io/github/license/StillQuery/branchopus?style=flat-square&color=71807b&label=许可证">
+  </p>
 </div>
+
+![Branchopus 操作演示](docs/assets/branchopus-demo.gif)
+
+<div align="center">
+  <sub>选择目录 → 建立索引 → 搜索只保留命中节点和必要路径</sub>
+</div>
+
+| 一眼看全目录 | 搜索干净 | 按类型筛选 | 本地运行 |
+| --- | --- | --- | --- |
+| 真正的分叉树，可拖动、缩放 | 只显示命中节点和路径 | Markdown、PDF、图片等可组合筛选 | 数据留在本机，无需安装 |
+
+Branchopus 是一个轻量的 Windows 本地目录树查看器。它适合目录层级深、文件较多，又不想逐层打开资源管理器确认内容的场景。
+
+<details>
+<summary>查看完整界面</summary>
 
 ![Branchopus 主界面](docs/assets/branchopus-screenshot.png)
 
-Branchopus 是一个轻量的 Windows 本地目录树查看器。它适合目录层级深、文件较多，又不想逐层打开资源管理器确认内容的场景。
+</details>
 
 ## 功能
 
