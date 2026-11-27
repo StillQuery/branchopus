@@ -2,6 +2,17 @@
 
 All notable changes to Branchopus are documented in this file.
 
+## [0.1.2] - 2026-11-27
+
+### Added
+
+- Hover details for every tree node, including its full name, absolute path, type, and relevant file count.
+
+### Fixed
+
+- Lazy-loaded child pages now reset with each search, type filter, root, or branch change.
+- Stale child-page responses can no longer merge into a newer query result.
+
 ## [0.1.1] - 2026-11-26
 
 ### Added

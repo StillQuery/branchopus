@@ -29,7 +29,7 @@ const pickerFolders = ref<FolderEntry[]>([])
 const pickerTruncated = ref(false)
 const viewRoot = ref<TreeNode | null>(null)
 const loadedDirectories = new Set<number>()
-const loadingDirectories = new Set<number>()
+const loadingDirectories = new Map<number, number>()
 const directoryOffsets = new Map<number, number>()
 const partialDirectories = ref(new Set<number>())
 const contextMenu = ref<{ node: TreeNode; x: number; y: number } | null>(null)
@@ -39,12 +39,21 @@ const treeRevision = ref(0)
 const depthRevision = ref(0)
 let searchTimer = 0
 let requestVersion = 0
+let lazyRevision = 0
 let noticeTimer = 0
 
 const selectedLabel = computed(() => {
   const count = selectedExtensions.value.length
   return count === 0 ? '全部类型' : count === 1 ? selectedExtensions.value[0] : `${count} 种类型`
 })
+
+function invalidateLazyState() {
+  lazyRevision++
+  loadedDirectories.clear()
+  loadingDirectories.clear()
+  directoryOffsets.clear()
+  partialDirectories.value = new Set()
+}
 
 async function openFolderPicker() {
   pickerOpen.value = true
@@ -84,8 +93,6 @@ async function chooseFolder(path = pickerPath.value) {
       const root = await RootNode() as TreeNode
       viewRoot.value = root
       branchFocusID.value = null
-      loadedDirectories.clear()
-      directoryOffsets.clear()
       await runQuery()
     }
   } catch (e) {
@@ -97,6 +104,9 @@ async function chooseFolder(path = pickerPath.value) {
 
 async function runQuery() {
   if (!summary.value) return
+  // Child pages belong to one exact query. Search text, file types, roots and
+  // focus can all change which children are eligible and how offsets behave.
+  invalidateLazyState()
   const version = ++requestVersion
   querying.value = true
   try {
@@ -120,20 +130,22 @@ async function runQuery() {
 
 async function resetLazyView() {
   if (!viewRoot.value) return
-  loadedDirectories.clear()
-  directoryOffsets.clear()
-  partialDirectories.value = new Set()
+  invalidateLazyState()
   result.value = { nodes: [{ ...viewRoot.value, parentId: -1 }], matches: 0, truncated: false, queryMs: 0 }
   await loadDirectory(viewRoot.value)
 }
 
 async function loadDirectory(node: TreeNode, loadMore = false) {
+  const revision = lazyRevision
   const continuing = loadMore || (loadedDirectories.has(node.id) && partialDirectories.value.has(node.id))
-  if (node.kind !== 'directory' || (!continuing && loadedDirectories.has(node.id)) || loadingDirectories.has(node.id)) return
-  loadingDirectories.add(node.id)
+  if (node.kind !== 'directory' || (!continuing && loadedDirectories.has(node.id)) || loadingDirectories.get(node.id) === revision) return
+  loadingDirectories.set(node.id, revision)
   try {
     const offset = continuing ? (directoryOffsets.get(node.id) || 0) : 0
     const page = await LoadChildren({ parentId: node.id, text: search.value, extensions: selectedExtensions.value, offset, limit: 800 }) as { nodes: TreeNode[]; total: number; hasMore: boolean }
+    // A newer full query has replaced the tree while this page was loading.
+    // Discard the stale response instead of merging it into the new result.
+    if (revision !== lazyRevision) return
     const existing = new Map(result.value.nodes.map(item => [item.id, item]))
     for (const child of page.nodes || []) existing.set(child.id, child)
     const parent = existing.get(node.id)
@@ -145,8 +157,11 @@ async function loadDirectory(node: TreeNode, loadMore = false) {
     if (page.hasMore) partial.add(node.id); else partial.delete(node.id)
     partialDirectories.value = partial
     loadedDirectories.add(node.id)
-  } catch (e) { error.value = String(e) }
-  finally { loadingDirectories.delete(node.id) }
+  } catch (e) {
+    if (revision === lazyRevision) error.value = String(e)
+  } finally {
+    if (loadingDirectories.get(node.id) === revision) loadingDirectories.delete(node.id)
+  }
 }
 
 async function loadMoreFromMenu() {
@@ -172,9 +187,6 @@ async function onlyBranch() {
   search.value = ''
   selectedExtensions.value = []
   branchFocusID.value = node.id
-  loadedDirectories.clear()
-  directoryOffsets.clear()
-  partialDirectories.value = new Set()
   await runQuery()
 }
 
@@ -186,9 +198,6 @@ async function setAsRoot() {
   selectedExtensions.value = []
   branchFocusID.value = null
   viewRoot.value = node
-  loadedDirectories.clear()
-  directoryOffsets.clear()
-  partialDirectories.value = new Set()
   await runQuery()
 }
 

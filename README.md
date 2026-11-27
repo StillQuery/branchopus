@@ -55,7 +55,7 @@ Branchopus 是一个轻量的 Windows 本地目录树查看器。它适合目录
 系统要求：Windows 10/11 x64，并安装 Microsoft Edge WebView2 Runtime。Windows 10/11 通常已自带 WebView2。
 
 1. 打开 [Releases](https://github.com/StillQuery/branchopus/releases/latest)。
-2. 下载 `Branchopus-v0.1.1-windows-x64.zip`。
+2. 下载 `Branchopus-v0.1.2-windows-x64.zip`。
 3. 解压到任意纯英文路径，例如 `C:\Tools\Branchopus`。
 4. 双击 `Branchopus.exe`，不需要安装或管理员权限。
 

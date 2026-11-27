@@ -19,6 +19,10 @@ import { nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 const props = defineProps<{ nodes: TreeNode[]; autoExpand: boolean; maxDepth: number; revision: number; depthRevision: number; filtered: boolean }>()
 const emit = defineEmits<{ open: [node: TreeNode]; expand: [node: TreeNode]; context: [node: TreeNode, x: number, y: number] }>()
 const canvas = ref<HTMLCanvasElement | null>(null)
+const tooltipElement = ref<HTMLDivElement | null>(null)
+
+interface TooltipState { node: TreeNode; x: number; y: number }
+const tooltip = ref<TooltipState | null>(null)
 
 interface PlacedNode extends TreeNode { x: number; y: number; hitWidth: number }
 let placed: PlacedNode[] = []
@@ -40,6 +44,73 @@ let resizeObserver: ResizeObserver | null = null
 let expanded = new Set<number>()
 let depthPresetPending = true
 let queryExpandPending = false
+let tooltipTimer = 0
+let tooltipTargetID = -1
+let tooltipPointerX = 0
+let tooltipPointerY = 0
+
+function hideTooltip() {
+  window.clearTimeout(tooltipTimer)
+  tooltipTimer = 0
+  tooltipTargetID = -1
+  tooltip.value = null
+}
+
+function placeTooltip(node: TreeNode) {
+  const element = tooltipElement.value
+  const margin = 10
+  const gapX = 14
+  const gapY = 16
+  const tooltipWidth = element?.offsetWidth || 360
+  const tooltipHeight = element?.offsetHeight || 82
+  const preferredX = tooltipPointerX + gapX + tooltipWidth <= window.innerWidth - margin
+    ? tooltipPointerX + gapX
+    : tooltipPointerX - tooltipWidth - gapX
+  const preferredY = tooltipPointerY + gapY + tooltipHeight <= window.innerHeight - margin
+    ? tooltipPointerY + gapY
+    : tooltipPointerY - tooltipHeight - gapY
+  tooltip.value = {
+    node,
+    x: Math.max(margin, Math.min(preferredX, window.innerWidth - tooltipWidth - margin)),
+    y: Math.max(margin, Math.min(preferredY, window.innerHeight - tooltipHeight - margin)),
+  }
+}
+
+async function showTooltip(node: TreeNode) {
+  placeTooltip(node)
+  await nextTick()
+  if (tooltip.value?.node.id === node.id) placeTooltip(node)
+}
+
+function updateTooltip(node: TreeNode | undefined, event: PointerEvent) {
+  tooltipPointerX = event.clientX
+  tooltipPointerY = event.clientY
+  if (!node) {
+    hideTooltip()
+    return
+  }
+  if (tooltip.value?.node.id === node.id) {
+    placeTooltip(node)
+    return
+  }
+  if (tooltipTargetID === node.id) return
+  window.clearTimeout(tooltipTimer)
+  tooltip.value = null
+  tooltipTargetID = node.id
+  tooltipTimer = window.setTimeout(() => {
+    tooltipTimer = 0
+    if (!dragging && tooltipTargetID === node.id) showTooltip(node)
+  }, 320)
+}
+
+function nodeMeta(node: TreeNode) {
+  if (node.kind === 'directory') {
+    const suffix = props.filtered ? '个匹配文件' : '个文件'
+    return `文件夹 · ${node.leafCount.toLocaleString()}${suffix}`
+  }
+  if (!node.extension || node.extension === '无扩展名') return '无扩展名文件'
+  return `${node.extension.replace(/^\./, '').toUpperCase()} 文件`
+}
 
 function layout() {
   const children = new Map<number, TreeNode[]>()
@@ -226,6 +297,7 @@ function hitTest(event: MouseEvent) {
 }
 
 function onPointerDown(event: PointerEvent) {
+  hideTooltip()
   dragging = true; moved = false; lastX = event.clientX; lastY = event.clientY
   canvas.value?.setPointerCapture(event.pointerId)
 }
@@ -239,10 +311,18 @@ function onPointerMove(event: PointerEvent) {
     const hit = hitTest(event)
     const next = hit?.id ?? -1
     if (next !== hoverID) { hoverID = next; if (canvas.value) canvas.value.style.cursor = hit ? 'pointer' : 'grab'; drawSoon() }
+    updateTooltip(hit, event)
   }
 }
 
 function onPointerUp() { dragging = false; if (canvas.value) canvas.value.style.cursor = 'grab' }
+
+function onPointerLeave() {
+  hoverID = -1
+  hideTooltip()
+  if (canvas.value) canvas.value.style.cursor = 'grab'
+  drawSoon()
+}
 
 function onClick(event: MouseEvent) {
   if (moved) return
@@ -256,12 +336,14 @@ function onClick(event: MouseEvent) {
 
 function onContextMenu(event: MouseEvent) {
   event.preventDefault()
+  hideTooltip()
   const node = hitTest(event)
   if (node) emit('context', node, event.clientX, event.clientY)
 }
 
 function onWheel(event: WheelEvent) {
   event.preventDefault()
+  hideTooltip()
   const rect = canvas.value!.getBoundingClientRect()
   const px = event.clientX - rect.left, py = event.clientY - rect.top
   const wx = (px - offsetX) / scale, wy = (py - offsetY) / scale
@@ -288,10 +370,24 @@ onMounted(() => {
   if (canvas.value) resizeObserver.observe(canvas.value)
   layout()
 })
-onBeforeUnmount(() => { resizeObserver?.disconnect(); if (frame) cancelAnimationFrame(frame) })
+onBeforeUnmount(() => {
+  resizeObserver?.disconnect()
+  window.clearTimeout(tooltipTimer)
+  if (frame) cancelAnimationFrame(frame)
+})
 </script>
 
 <template>
   <canvas ref="canvas" class="tree-canvas" @pointerdown="onPointerDown" @pointermove="onPointerMove"
-    @pointerup="onPointerUp" @pointercancel="onPointerUp" @click="onClick" @wheel="onWheel" @dblclick="onDoubleClick" @contextmenu="onContextMenu" />
+    @pointerup="onPointerUp" @pointercancel="onPointerUp" @pointerleave="onPointerLeave" @click="onClick"
+    @wheel="onWheel" @dblclick="onDoubleClick" @contextmenu="onContextMenu" />
+  <Teleport to="body">
+    <div v-if="tooltip" ref="tooltipElement" class="node-tooltip" :style="{ left: tooltip.x + 'px', top: tooltip.y + 'px' }">
+      <div class="node-tooltip-head">
+        <strong>{{ tooltip.node.name }}</strong>
+        <span>{{ nodeMeta(tooltip.node) }}</span>
+      </div>
+      <p>{{ tooltip.node.path }}</p>
+    </div>
+  </Teleport>
 </template>

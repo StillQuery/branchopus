@@ -9,7 +9,7 @@
   "info": {
     "companyName": "StillQuery",
     "productName": "Branchopus",
-    "productVersion": "0.1.1",
+    "productVersion": "0.1.2",
     "copyright": "Copyright (c) 2026 StillQuery",
     "comments": "A lightweight local folder tree viewer."
   },
